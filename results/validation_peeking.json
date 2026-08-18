@@ -1,0 +1,16 @@
+{
+  "peeking": {
+    "runs": 400,
+    "days_checked": 7,
+    "nominal_alpha": 0.05,
+    "fixed_horizon_fpr": 0.05,
+    "peeking_fpr": 0.17,
+    "inflation_factor": 3.4,
+    "peeking_ci95": [
+      0.13636898220196564,
+      0.20990913205867007
+    ],
+    "median_false_stop_day": 2.0,
+    "interpretation": "Every additional look is another chance to cross the threshold. The fixed-horizon test spends its whole alpha budget once; daily checking spends it 7 times."
+  }
+}

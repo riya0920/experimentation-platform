@@ -1,0 +1,19 @@
+{
+  "power": {
+    "runs": 300,
+    "true_relative_lift": 0.15,
+    "median_n_per_arm": 1979,
+    "observed_relative_lift_in_metric": 0.08989526425325024,
+    "predicted_power_from_metric_level_lift": 0.8581766059844911,
+    "predicted_power_from_generator_lift": 0.9991298008995918,
+    "empirical_power": 0.85,
+    "ci95": [
+      0.805182388854671,
+      0.8859675312881468
+    ],
+    "predicted_within_ci": 1.0,
+    "mde_at_this_n": 0.08316519023256064,
+    "observed_baseline_conversion": 0.5321355369014151,
+    "note": "The generator lift is PER-DAY; the metric is converted-at-least-once over the window, which saturates. predicted_power_from_generator_lift asks the calculator about an effect that does not exist at the metric level and overshoots badly. predicted_power_from_metric_level_lift is the correct comparison, and it is the one checked against the empirical CI."
+  }
+}

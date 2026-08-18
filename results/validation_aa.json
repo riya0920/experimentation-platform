@@ -1,0 +1,30 @@
+{
+  "aa": {
+    "runs": 1000,
+    "nominal_alpha": 0.05,
+    "conversion": {
+      "false_positives": 42,
+      "empirical_fpr": 0.042,
+      "ci95": [
+        0.031220885546165447,
+        0.056284425226603055
+      ],
+      "within_ci": 1.0
+    },
+    "revenue": {
+      "false_positives": 58,
+      "empirical_fpr": 0.058,
+      "ci95": [
+        0.04513327823499824,
+        0.0742495762662325
+      ],
+      "within_ci": 1.0
+    },
+    "pvalue_uniformity_ks": {
+      "statistic": 0.027895674609062726,
+      "p_value": 0.41041007808351826,
+      "uniform_not_rejected": true
+    },
+    "wall_s": 184.02229769999394
+  }
+}
