@@ -212,7 +212,7 @@ def run_peeking(runs: int = 500, days: int = 7, alpha: float = 0.05, seed0: int 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("suite", choices=["aa", "power", "peeking", "all"])
+    ap.add_argument("suite", choices=["aa", "power", "peeking", "cuped", "sequential", "all"])
     ap.add_argument("--runs", type=int, default=None)
     ap.add_argument("--alpha", type=float, default=0.05)
     args = ap.parse_args()
@@ -228,6 +228,12 @@ def main():
     if args.suite in ("peeking", "all"):
         print("peeking demo...")
         out["peeking"] = run_peeking(args.runs or 500, alpha=args.alpha)
+    if args.suite in ("cuped", "all"):
+        print("CUPED validation...")
+        out["cuped"] = run_cuped(args.runs or 200, alpha=args.alpha)
+    if args.suite in ("sequential", "all"):
+        print("sequential (mSPRT) validation...")
+        out["sequential"] = run_sequential(args.runs or 400, alpha=args.alpha)
 
     path = os.path.join(RESULTS, "validation_%s.json" % args.suite)
     with open(path, "w") as fh:
@@ -235,6 +241,128 @@ def main():
     print(json.dumps(out, indent=2, default=float))
     print("\nwrote", path)
 
+
+
+
+# ---------------------------------------------------------------------------
+# CUPED and sequential testing, validated the same way as everything else:
+# against data whose ground truth is known.
+# ---------------------------------------------------------------------------
+
+def run_cuped(runs: int = 200, alpha: float = 0.05, seed0: int = 70_000) -> dict:
+    """Measure CUPED's variance reduction and confirm it does not bias the estimate.
+
+    Two things must both hold, and only one of them is what people check:
+      * variance falls (the selling point)
+      * the ESTIMATE stays unbiased (the thing that makes it safe)
+    A CUPED implementation that estimates theta per-arm shrinks variance and
+    silently biases the effect, which is why the second check is here.
+    """
+    from .cuped import cuped_frame, theoretical_reduction
+
+    reductions, thetas, corrs = [], [], []
+    unadj_effects, adj_effects = [], []
+    unadj_sig, adj_sig = 0, 0
+
+    for i in range(runs):
+        cfg = ProductConfig(**{**FAST.__dict__, "seed": seed0 + i})
+        df = simulate(cfg, Effect(), experiment="cuped_%d" % i, with_pre_period=True)
+        post = user_level(df, "post")
+        pre = user_level(df, "pre")
+
+        merged, res = cuped_frame(post, pre, metric="revenue")
+        reductions.append(res.variance_reduction_pct)
+        thetas.append(res.theta)
+        corrs.append(res.correlation)
+
+        c = merged[merged["variant"] == "control"]
+        t = merged[merged["variant"] == "treatment"]
+        r_unadj = welch_ttest(c["revenue"].to_numpy(), t["revenue"].to_numpy(), alpha, "revenue")
+        r_adj = welch_ttest(c["revenue_cuped"].to_numpy(), t["revenue_cuped"].to_numpy(), alpha, "revenue_cuped")
+        unadj_effects.append(r_unadj.absolute_effect)
+        adj_effects.append(r_adj.absolute_effect)
+        unadj_sig += int(r_unadj.significant)
+        adj_sig += int(r_adj.significant)
+        if (i + 1) % 50 == 0:
+            print("  %d/%d  mean variance reduction so far: %.1f%%"
+                  % (i + 1, runs, float(np.mean(reductions))))
+
+    mean_corr = float(np.mean(corrs))
+    mean_reduction = float(np.mean(reductions))
+    return {
+        "runs": runs,
+        "true_effect": 0.0,
+        "mean_theta": float(np.mean(thetas)),
+        "mean_correlation_pre_post": mean_corr,
+        "mean_variance_reduction_pct": mean_reduction,
+        "theoretical_reduction_pct_from_r2": theoretical_reduction(mean_corr),
+        "effective_sample_multiplier": 1.0 / (1.0 - mean_reduction / 100.0) if mean_reduction < 100 else float("inf"),
+        "mean_effect_unadjusted": float(np.mean(unadj_effects)),
+        "mean_effect_cuped": float(np.mean(adj_effects)),
+        "unbiased": abs(float(np.mean(adj_effects))) < 3 * float(np.std(adj_effects)) / np.sqrt(runs) + 1e-9,
+        "fpr_unadjusted": unadj_sig / runs,
+        "fpr_cuped": adj_sig / runs,
+        "fpr_cuped_ci95": binomial_ci(adj_sig, runs),
+        "note": ("variance reduction should track r^2 closely; both arms are null so the FPR "
+                 "must stay near alpha AFTER adjustment -- a CUPED that reduces variance but "
+                 "inflates the FPR is biased"),
+    }
+
+
+def run_sequential(runs: int = 400, days: int = 7, alpha: float = 0.05, seed0: int = 80_000) -> dict:
+    """The payoff for the peeking demo: peek daily with mSPRT and stay at alpha.
+
+    Same schedule as `run_peeking` -- a look every day -- but the decision rule is
+    the always-valid p-value instead of a fixed-horizon one.
+    """
+    from .sequential import SequentialState, suggested_tau, update
+
+    null = Effect()
+    seq_fp, naive_fp = 0, 0
+    stop_days = []
+    tau = suggested_tau(0.5, 0.05)   # declared before the run, not tuned after
+
+    for i in range(runs):
+        c = ProductConfig(**{**FAST.__dict__, "seed": seed0 + i, "days": days})
+        df = simulate(c, null, experiment="seq_%d" % (seed0 + i), with_pre_period=False)
+        post = df[df["variant"] != "excluded"]
+
+        state = SequentialState(tau=tau, alpha=alpha)
+        naive_hit = False
+        for day in range(1, days + 1):
+            cum = post[post["day"] < day]
+            users = cum.groupby(["user_id", "variant"], as_index=False).agg(converted=("converted", "max"))
+            control = users[users["variant"] == "control"]["converted"].to_numpy()
+            treatment = users[users["variant"] == "treatment"]["converted"].to_numpy()
+            if len(control) < 30 or len(treatment) < 30:
+                continue
+            r = proportion_test(control, treatment, alpha)
+            se = (r.ci_high - r.ci_low) / (2 * 1.959963985)
+            update(state, r.absolute_effect, se, len(control) + len(treatment))
+            if r.significant and not naive_hit:
+                naive_hit = True
+
+        seq_fp += int(state.crossed)
+        naive_fp += int(naive_hit)
+        if state.crossed:
+            stop_days.append(state.crossed_at_n)
+        if (i + 1) % 100 == 0:
+            print("  %d/%d  sequential FPR %.3f vs naive-peeking %.3f"
+                  % (i + 1, runs, seq_fp / (i + 1), naive_fp / (i + 1)))
+
+    return {
+        "runs": runs,
+        "days_checked": days,
+        "nominal_alpha": alpha,
+        "tau": tau,
+        "naive_peeking_fpr": naive_fp / runs,
+        "sequential_fpr": seq_fp / runs,
+        "sequential_ci95": binomial_ci(seq_fp, runs),
+        "controls_error": binomial_ci(seq_fp, runs)[1] <= alpha * 1.5,
+        "interpretation": ("the mSPRT likelihood ratio is a martingale under the null, so by "
+                           "Ville's inequality the probability of EVER crossing 1/alpha is at "
+                           "most alpha -- peeking every day is allowed by construction"),
+    }
 
 if __name__ == "__main__":
     main()

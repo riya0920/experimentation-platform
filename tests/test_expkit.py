@@ -176,3 +176,116 @@ def test_pre_period_has_no_treatment_effect():
     c = pre[pre["variant"] == "control"]["converted"].mean()
     t = pre[pre["variant"] == "treatment"]["converted"].mean()
     assert abs(t - c) < 0.03, "treatment leaked into the pre-period"
+
+
+# --------------------------------------------------------------------------
+# CUPED
+# --------------------------------------------------------------------------
+
+def test_cuped_reduces_variance_when_covariate_is_predictive():
+    from expkit.cuped import apply_cuped
+
+    rng = np.random.default_rng(0)
+    x = rng.normal(0, 1, 5000)
+    y = 3 * x + rng.normal(0, 1, 5000)      # strongly correlated
+    adj, theta = apply_cuped(y, x)
+    assert adj.var(ddof=1) < y.var(ddof=1) * 0.2
+    assert abs(theta - 3.0) < 0.1
+
+
+def test_cuped_does_not_shift_the_mean():
+    """Unbiasedness: the adjustment subtracts a mean-zero term."""
+    from expkit.cuped import apply_cuped
+
+    rng = np.random.default_rng(1)
+    x = rng.normal(5, 2, 4000)
+    y = 2 * x + rng.normal(0, 3, 4000)
+    adj, _ = apply_cuped(y, x)
+    assert abs(adj.mean() - y.mean()) < 1e-9
+
+
+def test_cuped_is_a_noop_when_the_covariate_is_uncorrelated():
+    """Failure mode 1: no correlation means no reduction, not a free lunch."""
+    from expkit.cuped import apply_cuped
+
+    rng = np.random.default_rng(2)
+    x = rng.normal(0, 1, 4000)
+    y = rng.normal(0, 1, 4000)
+    adj, theta = apply_cuped(y, x)
+    assert abs(theta) < 0.1
+    assert adj.var(ddof=1) > y.var(ddof=1) * 0.9
+
+
+def test_cuped_handles_a_constant_covariate_without_dividing_by_zero():
+    from expkit.cuped import apply_cuped
+
+    y = np.array([1.0, 2.0, 3.0, 4.0])
+    x = np.array([7.0, 7.0, 7.0, 7.0])
+    adj, theta = apply_cuped(y, x)
+    assert theta == 0.0
+    assert np.allclose(adj, y)
+
+
+def test_cuped_variance_reduction_equals_r_squared():
+    """The expectation-setting fact: reduction is r^2, not r."""
+    from expkit.cuped import apply_cuped, theoretical_reduction
+
+    rng = np.random.default_rng(3)
+    x = rng.normal(0, 1, 20000)
+    y = 0.5 * x + rng.normal(0, 1, 20000)
+    r = float(np.corrcoef(y, x)[0, 1])
+    adj, _ = apply_cuped(y, x)
+    measured = 100.0 * (1 - adj.var(ddof=1) / y.var(ddof=1))
+    assert abs(measured - theoretical_reduction(r)) < 1.5
+
+
+# --------------------------------------------------------------------------
+# sequential testing
+# --------------------------------------------------------------------------
+
+def test_msprt_lambda_grows_with_a_larger_effect():
+    from expkit.sequential import msprt_lambda
+
+    small = msprt_lambda(effect=0.001, se=0.01, tau=0.02)
+    large = msprt_lambda(effect=0.050, se=0.01, tau=0.02)
+    assert large > small
+
+
+def test_always_valid_p_is_monotonically_non_increasing():
+    """The running minimum is what makes a stopping rule on it valid."""
+    from expkit.sequential import SequentialState, update
+
+    state = SequentialState(tau=0.02)
+    ps = []
+    for effect in (0.05, 0.001, 0.0005, 0.03):
+        update(state, effect, se=0.01, n=1000)
+        ps.append(state.always_valid_p)
+    assert ps == sorted(ps, reverse=True)
+
+
+def test_sequential_does_not_fire_on_pure_noise():
+    from expkit.sequential import SequentialState, update
+
+    rng = np.random.default_rng(7)
+    fired = 0
+    for _ in range(200):
+        state = SequentialState(tau=0.02, alpha=0.05)
+        for step in range(1, 15):
+            n = 500 * step
+            se = 0.5 / np.sqrt(n)
+            update(state, rng.normal(0, se), se, n)
+        fired += int(state.crossed)
+    # Ville's inequality bounds this by alpha over ALL looks; it is typically
+    # far more conservative than the nominal rate.
+    assert fired / 200 <= 0.05
+
+
+def test_confidence_sequence_is_wider_than_a_fixed_horizon_ci():
+    """The price of being allowed to look whenever you like."""
+    from expkit.sequential import confidence_sequence
+
+    effect, se = 0.02, 0.005
+    lo, hi = confidence_sequence(effect, se, tau=0.02, alpha=0.05)
+    fixed_half_width = 1.959963985 * se
+    assert (hi - lo) / 2 > fixed_half_width
+    assert lo < effect < hi

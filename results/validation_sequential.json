@@ -1,0 +1,16 @@
+{
+  "sequential": {
+    "runs": 300,
+    "days_checked": 7,
+    "nominal_alpha": 0.05,
+    "tau": 0.025,
+    "naive_peeking_fpr": 0.19,
+    "sequential_fpr": 0.006666666666666667,
+    "sequential_ci95": [
+      0.0018301483579117855,
+      0.023977583250306973
+    ],
+    "controls_error": 1.0,
+    "interpretation": "the mSPRT likelihood ratio is a martingale under the null, so by Ville's inequality the probability of EVER crossing 1/alpha is at most alpha -- peeking every day is allowed by construction"
+  }
+}
