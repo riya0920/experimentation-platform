@@ -21,6 +21,13 @@ from expkit.stats import (
 from expkit.validation import binomial_ci
 
 
+@pytest.fixture(scope="module")
+def small():
+    """A modest simulated experiment, shared by the metrics-layer tests."""
+    cfg = ProductConfig(n_users=3000, days=5, seed=21)
+    return cfg, simulate(cfg, Effect(conversion_lift=0.10), "metrics_layer", with_pre_period=False)
+
+
 def test_assignment_is_deterministic():
     a = [assign("u1", "exp_a") for _ in range(5)]
     assert len(set(a)) == 1
@@ -289,3 +296,84 @@ def test_confidence_sequence_is_wider_than_a_fixed_horizon_ci():
     fixed_half_width = 1.959963985 * se
     assert (hi - lo) / 2 > fixed_half_width
     assert lo < effect < hi
+
+
+# --------------------------------------------------------------------------
+# metrics layer
+# --------------------------------------------------------------------------
+
+def test_every_registered_metric_declares_a_unit_and_direction():
+    from expkit.metrics_layer import REGISTRY
+
+    for name, m in REGISTRY.items():
+        assert m.unit == "user_id", "%s must be analysed at the randomisation unit" % name
+        assert m.direction in ("increase", "decrease")
+        assert m.description.strip(), "%s has no description" % name
+        if m.guardrail:
+            assert m.tolerance_relative > 0, ("%s is a guardrail with zero tolerance; "
+                                              "'no metric may ever dip' blocks every ship" % name)
+
+
+def test_metric_frame_computes_every_metric_once(small):
+    from expkit.metrics_layer import REGISTRY, build_metric_frame
+
+    cfg, df = small
+    events = df[(df["period"] == "post") & (df["variant"] != "excluded")]
+    frame = build_metric_frame(events)
+    for name in REGISTRY:
+        assert name in frame.columns
+    assert frame["user_id"].is_unique, "one row per randomisation unit"
+
+
+def test_registry_validation_catches_an_out_of_range_metric(small):
+    from expkit.metrics_layer import REGISTRY, validate_registry
+
+    cfg, df = small
+    events = df[(df["period"] == "post") & (df["variant"] != "excluded")].copy()
+    assert validate_registry(events)["passed"]
+
+    # Corrupt the data the way a broken upstream would: negative revenue.
+    events.loc[events.index[:20], "revenue"] = -5.0
+    result = validate_registry(events)
+    assert not result["passed"]
+    assert "revenue_per_user" in result["failures"]
+
+
+def test_conversion_is_a_user_level_max_not_a_row_count(small):
+    """The definition that stops a session-level analysis of a user-level test."""
+    from expkit.metrics_layer import REGISTRY
+
+    cfg, df = small
+    events = df[(df["period"] == "post") & (df["variant"] != "excluded")]
+    frame = REGISTRY["conversion_rate"].aggregate(events)
+    assert frame["conversion_rate"].max() <= 1.0, "a user converts at most once by this definition"
+    assert len(frame) == events["user_id"].nunique()
+
+
+def test_revenue_includes_zero_spend_users(small):
+    """Excluding them silently changes the metric to revenue-per-PURCHASER."""
+    from expkit.metrics_layer import REGISTRY
+
+    cfg, df = small
+    events = df[(df["period"] == "post") & (df["variant"] != "excluded")]
+    frame = REGISTRY["revenue_per_user"].aggregate(events)
+    assert (frame["revenue_per_user"] == 0).any(), "zero-spend users must be present"
+    assert len(frame) == events["user_id"].nunique()
+
+
+def test_direction_decides_what_counts_as_good():
+    from expkit.metrics_layer import REGISTRY
+
+    assert REGISTRY["conversion_rate"].is_good(+0.01)
+    assert not REGISTRY["conversion_rate"].is_good(-0.01)
+    # Latency is the other way round: lower is better.
+    assert REGISTRY["p50_latency_ms"].is_good(-5.0)
+    assert not REGISTRY["p50_latency_ms"].is_good(+5.0)
+
+
+def test_catalogue_documents_every_metric():
+    from expkit.metrics_layer import REGISTRY, describe
+
+    doc = describe()
+    for name in REGISTRY:
+        assert "`%s`" % name in doc

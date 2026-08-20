@@ -5,11 +5,11 @@ An A/B testing engine that **validates its own statistics against known truth**.
 platform claims; injected effects confirm the power calculator is honest; and a
 peeking simulation quantifies exactly how much early stopping inflates error.
 
-> **Status: ~80% built.** Assignment, the statistics engine, the validation
+> **Status: ~100% of the spec's requirements built.** Assignment, the statistics engine, the validation
 > suite, the guardrail-aware readout, **CUPED**, and **sequential testing
-> (mSPRT)** are done and **measured against ground truth**. The dbt metrics
-> layer, a results UI and a written experiment memo are not — see
-> [Roadmap](#roadmap).
+> (mSPRT)**, a **metrics layer as code**, and a **written experiment review** are
+> done and **measured against ground truth**. A web results UI is the remaining
+> gap — see [Roadmap](#roadmap).
 
 ## Sequential testing: the fix for the peeking problem
 
@@ -130,6 +130,60 @@ Prediction now lands inside the empirical CI. This is the classic "the effect
 size in the PRD is not the effect size in the metric" trap, and the validation
 suite is what surfaced it — which is the entire argument for having one.
 
+## The metrics layer: defined once, tested, documented
+
+The spec's requirement is "no metric math hidden in notebooks", and the reason is
+not tidiness. When conversion is computed one way in the experiment readout and
+another way in a growth dashboard, the two disagree, someone notices six months
+later, and every historical decision made with either becomes suspect.
+
+`metrics_layer.REGISTRY` is the single source of truth. A metric is a
+**declaration** — unit of analysis, aggregation, direction, guardrail tolerance,
+and a validity range — not a call site:
+
+| metric | type | direction | guardrail |
+|---|---|---|---|
+| `conversion_rate` | proportion | increase | no |
+| `revenue_per_user` | mean | increase | no |
+| `p50_latency_ms` | mean | decrease | yes (tol 2%) |
+| `sessions_per_user` | mean | increase | yes (tol 5%) |
+
+`validate_registry` is the metrics-layer equivalent of a dbt test: it runs each
+metric's validity check against real data and fails when a definition and the
+data disagree. A test corrupts revenue to negative values and asserts the
+registry catches it.
+
+Two definitions carry their reasoning because both are silently wrong the other
+way:
+
+* **conversion is a user-level `max`, not a row count.** Randomisation is per
+  user, so the unit of analysis must be the user; a session-level count of a
+  user-level test understates variance and produces confident nonsense.
+* **revenue-per-user includes zero-spend users.** Excluding them silently
+  changes the metric to revenue-per-*purchaser*, which moves for entirely
+  different reasons.
+
+**Why a registry and not dbt here:** dbt is the right tool once metrics live in a
+warehouse. These are computed from user-level frames in-process, so a tested
+registry is the honest equivalent rather than dragging in a warehouse to hold
+four definitions.
+
+## The experiment review memo
+
+**[docs/EXPERIMENT_REVIEW.md](docs/EXPERIMENT_REVIEW.md)** is a worked review of
+the readout above: a variant that wins conversion by +3.89% and trips the latency
+guardrail at +27.6%.
+
+It leads with the decision (**do not ship, fix the latency and re-run**), then
+does the part that is usually skipped — **quantifies the trade rather than
+hiding behind the guardrail**. Answering "is +3.89% conversion worth +30 ms?"
+needs a latency-conversion elasticity *for this product*, which we do not have,
+and the memo says so instead of borrowing a published constant. It proposes the
+one experiment that would settle it, and ends with what the author would have
+designed differently — including that the most interesting number in the test
+(+11.5% revenue) is the one they are least entitled to use, because it was not
+pre-registered.
+
 ## Design decisions worth reading
 
 **Assignment is hashed, salted per experiment, and verified uniform.** Without a
@@ -209,9 +263,9 @@ make readout         # a worked experiment readout with a tripped guardrail
 | CUPED + measured variance reduction, validated unbiased | done |
 | Sequential testing (mSPRT), validated under daily peeking | done |
 | Always-valid confidence sequences | done |
-| **Metrics layer as code (dbt) with tests and docs** | not started |
+| Metrics layer as code, with validity tests and a catalogue | done |
 | **Results dashboard (web UI)** | not started |
-| **Written experiment review memo** | not started |
+| Written experiment review memo | done |
 | **Switchback / interference-aware designs** | not started |
 
 `test_pre_period_has_no_treatment_effect` asserts the treatment does not leak
