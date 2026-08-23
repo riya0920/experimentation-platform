@@ -1,0 +1,23 @@
+{
+  "n_worlds": 150,
+  "nominal": 0.95,
+  "design": "4h buckets, stratified by hour, burn-in 1",
+  "coverage": {
+    "iid": 1.0,
+    "block_bootstrap": 1.0,
+    "stratified": 1.0
+  },
+  "mean_ci_width": {
+    "iid": 0.07129471758399011,
+    "block_bootstrap": 0.12811689848270458,
+    "stratified": 0.02512500510824938
+  },
+  "empirical_sd_of_estimate": 0.004381377321475849,
+  "well_calibrated_width_would_be": 0.01717499910018533,
+  "width_vs_calibrated": {
+    "iid": 4.151075477099781,
+    "block_bootstrap": 7.4594995746650214,
+    "stratified": 1.462882470135225
+  },
+  "reading": "all three cover at 100% against a nominal 95%, which is not a pass: every one is conservative, and the more structure the analysis ignores the more precision it burns. The day-level block bootstrap -- the 'robust' choice -- is the worst, because resampling whole days discards the hour-of-day blocking the design paid for."
+}

@@ -5,11 +5,12 @@ An A/B testing engine that **validates its own statistics against known truth**.
 platform claims; injected effects confirm the power calculator is honest; and a
 peeking simulation quantifies exactly how much early stopping inflates error.
 
-> **Status: ~100% of the spec's requirements built.** Assignment, the statistics engine, the validation
-> suite, the guardrail-aware readout, **CUPED**, and **sequential testing
-> (mSPRT)**, a **metrics layer as code**, and a **written experiment review** are
-> done and **measured against ground truth**. A web results UI is the remaining
-> gap — see [Roadmap](#roadmap).
+> **Status: ~100% of the spec built.** Assignment, the statistics engine, the
+> validation suite, the guardrail-aware readout, **CUPED**, **sequential testing
+> (mSPRT)**, a **metrics layer as code**, a **written experiment review**, an
+> **SRM gate**, a **generated results page**, and **switchback designs for
+> interference** are done and **measured against ground truth**. What remains is
+> named in [Roadmap](#roadmap), and none of it is a statistics gap.
 
 ## Sequential testing: the fix for the peeking problem
 
@@ -184,6 +185,144 @@ designed differently — including that the most interesting number in the test
 (+11.5% revenue) is the one they are least entitled to use, because it was not
 pre-registered.
 
+## Interference: where the whole platform's core assumption fails
+
+Everything above assumes **SUTVA** — one user's outcome depends only on that
+user's own assignment. In a marketplace that is false, and the platform will
+report a confident, significant, badly wrong number without any of its other
+checks firing. A/A validation passes. SRM passes. The interval is tight. The
+launch still under-delivers.
+
+`src/expkit/interference.py` simulates a two-sided marketplace where couriers are
+a shared finite resource, so the ground-truth global effect is computable: run the
+whole world at 100% control, run it again at 100% treatment, subtract.
+
+Over 30 worlds, true effect **+9.56pp** fulfillment:
+
+| design | estimate | bias | RMSE |
+|---|---|---|---|
+| user-randomised A/B | +69.5pp | **+627%** | 0.599 |
+| switchback, 4h buckets | +8.86pp | -7.3% | 0.0295 |
+| switchback, 4h, **stratified by hour of day** | +9.56pp | **-0.008%** | 0.0040 |
+
+Three things came out of building this that were not in the plan.
+
+**The direction of the bias is a property of the matching policy, not of
+interference.** Under priority matching the A/B overstates by 7.3x. Re-run with
+proportional rationing — no arm jumps the queue — and the A/B reports *exactly
+zero* against a real +9.6pp effect, because the treated arm's saved supply flows
+back into the shared pool and lifts control by the same amount. "Interference
+inflates your estimate" is the wrong lesson. `make interference-mechanism` runs
+that falsification.
+
+**Blocking beat sample size, and it reversed the recommendation.** The first sweep
+said *longer* buckets were better, which makes no sense — fewer randomisation
+units should be worse. The real driver was hour-of-day imbalance, not unit count.
+Stratifying so each slot-of-day splits evenly between arms cut RMSE **6-14x at
+every bucket length** and moved the answer from 24h buckets to 2-4h.
+
+**Carryover was never the problem; the estimand was.** At high fill the estimate
+ran 25% low and no amount of burn-in fixed it. The unweighted mean of per-bucket
+rates answers *"what did the average hour look like"*; a launch delivers *"what
+did the average request experience"*. Off-peak buckets are saturated in both arms
+and carry no effect; peak buckets carry all of it and all the demand.
+Demand-weighting holds bias inside +/-1.5% across every supply regime, where the
+unweighted estimator ranges from **+11% to -33%**.
+
+### When does this matter at all
+
+Switchback is not free, so the useful question is when to pay for it. Sweeping how
+binding the supply constraint is:
+
+| baseline fill | true effect | A/B estimate | A/B error |
+|---|---|---|---|
+| 33% | +6.0pp | +72.9pp | **12.1x over** |
+| 57% | +9.6pp | +69.5pp | 7.3x over |
+| 79% | +9.6pp | +30.0pp | 3.1x over |
+| 90% | +8.0pp | +11.4pp | 1.4x over |
+| 99% | +1.2pp | +0.07pp | **misses it entirely** |
+| 100% | 0 | 0 | no effect to find |
+
+Displacement requires scarcity. Where supply is abundant, taking a courier from
+control costs control nothing, and a user-randomised test is fine.
+
+### Inference, and the price of being robust
+
+Every interval here **over**-covers — 100% against a nominal 95%. That is a bug in
+the other direction, which is why the coverage check reports interval *width*
+against the estimator's actual spread rather than just the hit rate:
+
+| interval | coverage | width vs calibrated |
+|---|---|---|
+| design-matched (within-slot) | 1.00 | 1.5x |
+| iid t | 1.00 | 4.2x |
+| day-level block bootstrap | 1.00 | **7.5x** |
+
+The "robust" choice is the worst one. Resampling whole days discards exactly the
+hour-of-day blocking the design paid for. The analysis has to match the design;
+robustness is neither free nor automatically correct.
+
+## SRM: the check that runs before the statistics
+
+A sample ratio mismatch does not mean the effect is smaller than reported. It
+means the arms are **not comparable populations**, so the difference of means is
+not estimating a treatment effect at all. The usual causes sit upstream of the
+statistics entirely — a redirect that fails more often for one variant, a bot
+filter keying on something the treatment changed, an SDK dropping events under the
+treatment's extra latency — and every one of them also moves the metric, in the
+same direction as the "win".
+
+So it is a **hard gate**, not a warning. The readout short-circuits to `INVALID`
+and gives exactly one reason; it does not also announce the guardrail verdict,
+because that invites someone to act on the half they liked.
+
+```
+## Decision: INVALID
+
+* SAMPLE RATIO MISMATCH: expected 50.0% treatment, observed 48.469% (n=38776,
+  chi2 p=4.33e-09 < 0.001). The arms are not comparable populations, so no metric
+  below is interpretable. Fix the assignment or logging path and rerun; do not
+  analyse around it.
+```
+
+The threshold is **0.001, not 0.05**, and the reason is multiplicity rather than
+severity: this check runs on every experiment every day, so at 0.05 the alert
+channel is noise inside a week and everyone learns to ignore it.
+
+Validated against the **actual hash assignment** rather than binomial draws —
+which matters, because assignment is deterministic in `user_id`, so for a fixed
+population and a fixed experiment name the split is not random at all; only the
+salt varies it. Over 1,500 salts at n=40,000: **0 fires** at the 0.001 threshold,
+3.7% at 0.05, median p 0.497. Simulating binomial counts would have tested numpy
+rather than the thing that can actually break.
+
+Sensitivity, measured: a **1.9%** shortfall at n≈39k is caught; **1.5%** is not
+(p=0.13). The check is a floor on how broken assignment can be before anyone
+notices — not a proof that it is fine.
+
+## The results page
+
+`python -m expkit.dashboard` renders one self-contained HTML file — no CDN, no
+external requests, opens from disk. Panels are ordered the way a reviewer should
+read them, which is not the order they are computed in: **SRM first and alone**,
+then the decision and its reasons in sentences, then the primary metric with its
+interval, then guardrails with their tolerance drawn as a band, then secondaries,
+then the always-valid p-value by day — the only panel it is safe to read early.
+
+There is no aggregate health score and no significance traffic light anywhere on
+the page. Both invite the reader to skip the confidence interval, which is the
+number carrying the uncertainty.
+
+Two things this got wrong first, both now pinned by tests:
+
+* The interval chart plotted **absolute** effects on a shared axis. Conversion
+  moves by 0.014 and latency by 8, so the axis was owned entirely by whichever
+  metric had the largest unit and the conversion interval rendered as a dot.
+  Percent change is what makes an axis shareable.
+* MDE was rendered only when the result was *not* significant. It belongs on every
+  readout: "not significant" from an underpowered test and "no effect" are
+  different findings, and that number is what separates them.
+
 ## Design decisions worth reading
 
 **Assignment is hashed, salted per experiment, and verified uniform.** Without a
@@ -238,14 +377,23 @@ different claim.
 
 ```bash
 pip install -r requirements.txt
-make test            # 20 fast unit tests
+make test            # 61 tests
 make validate-aa     # 1000 A/A experiments (~3 min)
 make validate-power  # 300 experiments with a known injected effect
 make validate-peek   # 400 experiments, daily peeking vs fixed horizon
 make validate-cuped  # 200 experiments, variance reduction vs r^2
 make validate-seq    # 400 experiments, mSPRT under daily peeking
 make readout         # a worked experiment readout with a tripped guardrail
+make dashboard       # results/dashboard.html plus the SRM-failure variant
+make interference    # switchback vs user-randomised, against ground truth
+make interference-sweep       # bucket length x burn-in x stratification
+make interference-mechanism   # the falsification: is the bias really displacement
+make interference-regimes     # when interference matters at all
+make interference-coverage    # do the intervals actually cover
 ```
+
+`make test` runs 61 tests, of which 13 pin the interference findings and 12 pin
+the SRM gate and the results page.
 
 ## Roadmap (the remaining ~60%)
 
@@ -264,9 +412,13 @@ make readout         # a worked experiment readout with a tripped guardrail
 | Sequential testing (mSPRT), validated under daily peeking | done |
 | Always-valid confidence sequences | done |
 | Metrics layer as code, with validity tests and a catalogue | done |
-| **Results dashboard (web UI)** | not started |
+| Results page, self-contained, SRM-gated | done |
+| SRM as a hard gate, validated on the real assignment function | done |
 | Written experiment review memo | done |
-| **Switchback / interference-aware designs** | not started |
+| Switchback vs user-randomised, scored against a computable global effect | done |
+| Stratified switchback + the estimand fix (bias 627% -> 0.008%) | done |
+| **Switchback on a real marketplace rather than a simulator** | not possible here |
+| **Interference through a social graph rather than a shared resource** | not started |
 
 `test_pre_period_has_no_treatment_effect` asserts the treatment does not leak
 into the pre-period, which is the precondition CUPED depends on — a covariate
@@ -283,6 +435,13 @@ contaminated by the treatment biases the estimate silently.
   a modest persistent per-user component (r = 0.20). That is an honest property
   of the generator, not a limitation of CUPED — the r² relationship is what
   generalises, and it is the number the tests pin.
+* **The marketplace is a simulator, not a marketplace.** The bias figures are
+  exact for *this* model of displacement, and the model was chosen because its
+  ground truth is computable. What generalises is the method — compute the global
+  effect, score designs against it — not the 7.3x.
+* **Every interference interval over-covers**, by 1.5x to 7.5x. The designs are
+  unbiased; the *inference* around them still leaves precision on the table, and
+  this repo says so rather than reporting "coverage 1.00" as a pass.
 * **mSPRT is conservative** (0.67% against a nominal 5%). That is correct
   behaviour for an always-valid test, but it means the power cost is real and
   this repo has **not** measured how much extra sample it needs to match

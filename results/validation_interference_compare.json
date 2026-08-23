@@ -1,0 +1,29 @@
+{
+  "n_worlds": 30,
+  "ground_truth_gte": {
+    "mean": 0.0956018531550033,
+    "sd": 0.00046212541258530877
+  },
+  "user_randomised": {
+    "mean_estimate": 0.6947766400198374,
+    "bias_absolute": 0.5991747868648344,
+    "bias_relative_to_truth": 6.267397200903283,
+    "sd_of_estimate": 0.0034418784948379933,
+    "rmse": 0.5991856175327421
+  },
+  "switchback_4h_burnin1": {
+    "mean_estimate": 0.08863764705131282,
+    "bias_absolute": -0.006964206103690477,
+    "bias_relative_to_truth": -0.07284593210132775,
+    "sd_of_estimate": 0.02913688700583058,
+    "rmse": 0.02954707619819269
+  },
+  "switchback_4h_burnin1_stratified": {
+    "mean_estimate": 0.09559402690967893,
+    "bias_absolute": -7.826245324353091e-06,
+    "bias_relative_to_truth": -8.186290397178882e-05,
+    "sd_of_estimate": 0.0040669852626844085,
+    "rmse": 0.004003352640741283
+  },
+  "verdict": "user-randomised overstates the global effect by 7.3x"
+}

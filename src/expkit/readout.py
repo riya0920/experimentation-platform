@@ -53,6 +53,55 @@ class Readout:
     rows: list = field(default_factory=list)
     decision: str = ""
     reasons: list = field(default_factory=list)
+    srm: dict = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# sample ratio mismatch
+# ---------------------------------------------------------------------------
+
+# 0.001, not 0.05. An SRM check runs on every metric of every experiment, every
+# day -- thousands of tests -- so at 0.05 the alert channel is pure noise inside a
+# week and everyone learns to ignore it. The industry convention is 0.001 and the
+# reason is the multiplicity, not the severity.
+SRM_ALPHA = 0.001
+
+
+def srm_check(control_n: int, treatment_n: int, expected_ratio: float = 0.5,
+              alpha: float = SRM_ALPHA) -> dict:
+    """Did users actually arrive in the ratio the design asked for?
+
+    This runs BEFORE anything else, and it is a hard gate rather than a warning.
+    A sample ratio mismatch does not mean the effect is smaller than reported --
+    it means the two arms are not comparable populations, so the difference of
+    means is not estimating a treatment effect at all. The usual causes are
+    upstream of the statistics entirely: a redirect that fails more often for one
+    variant, a bot filter that keys on something the treatment changed, an SDK
+    that drops events under the treatment's extra latency. Every one of those
+    also breaks the metric, in the same direction as the "win".
+
+    Chi-square on the two counts, one degree of freedom.
+    """
+    n = control_n + treatment_n
+    if n == 0:
+        return {"n": 0, "passed": True, "p_value": 1.0, "observed_ratio": float("nan")}
+    exp_t = n * expected_ratio
+    exp_c = n * (1 - expected_ratio)
+    chi2 = (treatment_n - exp_t) ** 2 / exp_t + (control_n - exp_c) ** 2 / exp_c
+    # Survival function of chi2 with 1 df, via the normal: P(|Z| > sqrt(chi2)).
+    from math import erfc, sqrt
+    p = erfc(sqrt(chi2 / 2.0))
+    return {
+        "n": n,
+        "control_n": control_n,
+        "treatment_n": treatment_n,
+        "expected_ratio": expected_ratio,
+        "observed_ratio": treatment_n / n,
+        "chi2": chi2,
+        "p_value": p,
+        "alpha": alpha,
+        "passed": bool(p >= alpha),
+    }
 
 
 def analyse(users, metrics=DEFAULT_METRICS, primary: str = "conversion_rate", alpha: float = 0.05,
@@ -98,12 +147,27 @@ def analyse(users, metrics=DEFAULT_METRICS, primary: str = "conversion_rate", al
         for r, keep in zip(secondary, rejected):
             r["significant_after_bh"] = bool(keep)
 
-    return _decide(Readout(experiment=experiment, primary=primary, rows=rows), alpha)
+    srm = srm_check(int(prow["control_n"]), int(prow["treatment_n"]))
+    return _decide(Readout(experiment=experiment, primary=primary, rows=rows, srm=srm), alpha)
 
 
 def _decide(readout: Readout, alpha: float) -> Readout:
     prow = next(r for r in readout.rows if r["is_primary"])
     tripped = [r for r in readout.rows if r.get("tripped")]
+
+    # SRM first, and it short-circuits. Reporting a p-value underneath a failed
+    # SRM check invites someone to read it anyway.
+    if readout.srm and not readout.srm.get("passed", True):
+        readout.decision = "INVALID"
+        readout.reasons.append(
+            "SAMPLE RATIO MISMATCH: expected %.1f%% treatment, observed %.3f%% "
+            "(n=%d, chi2 p=%.2e < %.3f). The arms are not comparable populations, so no "
+            "metric below is interpretable. Fix the assignment or logging path and rerun; "
+            "do not analyse around it."
+            % (100 * readout.srm["expected_ratio"], 100 * readout.srm["observed_ratio"],
+               readout.srm["n"], readout.srm["p_value"], readout.srm["alpha"])
+        )
+        return readout
 
     if tripped:
         readout.decision = "DO NOT SHIP"
@@ -142,6 +206,11 @@ def _decide(readout: Readout, alpha: float) -> Readout:
 
 def render(readout: Readout) -> str:
     lines = ["# Experiment readout: %s" % readout.experiment, "", "## Decision: %s" % readout.decision, ""]
+    if readout.srm:
+        lines.append("**SRM check:** %s (observed %.3f%% treatment of n=%d, p=%.3g)"
+                     % ("pass" if readout.srm["passed"] else "FAIL",
+                        100 * readout.srm["observed_ratio"], readout.srm["n"], readout.srm["p_value"]))
+        lines.append("")
     for r in readout.reasons:
         lines.append("* %s" % r)
     lines += ["", "| metric | role | control | treatment | rel. effect | 95% CI (abs) | p | significant |",
@@ -177,7 +246,8 @@ def main():
     readout = analyse(users, experiment="exp_readout")
 
     if args.json:
-        print(json.dumps({"decision": readout.decision, "reasons": readout.reasons, "rows": readout.rows},
+        print(json.dumps({"decision": readout.decision, "reasons": readout.reasons,
+                          "srm": readout.srm, "rows": readout.rows},
                          indent=2, default=float))
     else:
         print(render(readout))

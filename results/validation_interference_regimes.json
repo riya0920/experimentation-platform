@@ -1,0 +1,60 @@
+{
+  "n_worlds": 30,
+  "grid": [
+    {
+      "supply_per_hour": 300.0,
+      "baseline_fulfillment": 0.3315026571677718,
+      "ground_truth_gte": 0.06004235279327364,
+      "ab_estimate": 0.7287613651102886,
+      "ab_overstatement_x": 12.137455166346003,
+      "switchback_estimate": 0.06101633418611488,
+      "switchback_bias_relative": 0.01622157273207904
+    },
+    {
+      "supply_per_hour": 520.0,
+      "baseline_fulfillment": 0.5741171473699797,
+      "ground_truth_gte": 0.0956018531550033,
+      "ab_estimate": 0.6947766400198374,
+      "ab_overstatement_x": 7.26739720090328,
+      "switchback_estimate": 0.09633690103364716,
+      "switchback_bias_relative": 0.007688636301349626
+    },
+    {
+      "supply_per_hour": 750.0,
+      "baseline_fulfillment": 0.7878118028132322,
+      "ground_truth_gte": 0.09610902329528319,
+      "ab_estimate": 0.29908360243486404,
+      "ab_overstatement_x": 3.1119201109344994,
+      "switchback_estimate": 0.09578040751990899,
+      "switchback_bias_relative": -0.0034191979494429784
+    },
+    {
+      "supply_per_hour": 900.0,
+      "baseline_fulfillment": 0.89483140592574,
+      "ground_truth_gte": 0.07949301209010996,
+      "ab_estimate": 0.11398948152406883,
+      "ab_overstatement_x": 1.433955998482673,
+      "switchback_estimate": 0.08087376950018042,
+      "switchback_bias_relative": 0.017369544489084034
+    },
+    {
+      "supply_per_hour": 1100.0,
+      "baseline_fulfillment": 0.9869570525679912,
+      "ground_truth_gte": 0.012060130645061359,
+      "ab_estimate": 0.0007752432417271193,
+      "ab_overstatement_x": 0.06428149615813512,
+      "switchback_estimate": 0.012319519922624289,
+      "switchback_bias_relative": 0.021507998975877598
+    },
+    {
+      "supply_per_hour": 1400.0,
+      "baseline_fulfillment": 1.0,
+      "ground_truth_gte": 0.0,
+      "ab_estimate": 0.0,
+      "ab_overstatement_x": null,
+      "switchback_estimate": 0.0,
+      "switchback_bias_relative": null
+    }
+  ],
+  "note": "as supply becomes abundant the constraint stops binding, the true effect goes to zero, and the A/B bias goes with it -- switchback is insurance you buy only where the resource is scarce"
+}

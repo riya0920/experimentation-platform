@@ -1,0 +1,17 @@
+{
+  "ground_truth_gte": 0.09518633501026819,
+  "estimate": 0.08373184151641411,
+  "ci_iid": [
+    0.05875523691435208,
+    0.10870844611847613
+  ],
+  "ci_block_bootstrap": [
+    0.03909515381229501,
+    0.12431280319208572
+  ],
+  "block_bootstrap_is_wider_by": 1.7059494422383437,
+  "iid_covers_truth": true,
+  "bootstrap_covers_truth": true,
+  "usable_fraction_after_burn_in": 0.8675595238095238,
+  "n_buckets": 583
+}

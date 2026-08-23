@@ -1,0 +1,18 @@
+{
+  "priority_matching": {
+    "mean_estimate": 0.694439613368365,
+    "bias_absolute": 0.5987982654771234,
+    "bias_relative_to_truth": 6.2608722971789,
+    "sd_of_estimate": 0.004314201287213065,
+    "rmse": 0.5988154338980691,
+    "ground_truth_gte": 0.09564134789124148
+  },
+  "proportional_matching": {
+    "mean_estimate": -1.5962990048690174e-07,
+    "bias_absolute": -0.09564150752114198,
+    "bias_relative_to_truth": -1.0000016690469553,
+    "sd_of_estimate": 1.5691534163643994e-05,
+    "rmse": 0.09564329925912204,
+    "ground_truth_gte": 0.09564134789124148
+  }
+}
