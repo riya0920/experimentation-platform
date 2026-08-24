@@ -1,0 +1,41 @@
+{
+  "rows": [
+    {
+      "p_between": 5e-05,
+      "modularity": 0.8851050112483888,
+      "bernoulli_bias": -0.5608621865409604,
+      "cluster_bias": -0.039361191405519864,
+      "bias_removed": 0.9298202083326841
+    },
+    {
+      "p_between": 0.0004,
+      "modularity": 0.5391676149269496,
+      "bernoulli_bias": -0.5883259208287622,
+      "cluster_bias": -0.2971307356865653,
+      "bias_removed": 0.4949555592111197
+    },
+    {
+      "p_between": 0.0008,
+      "modularity": 0.3723290882731527,
+      "bernoulli_bias": -0.5895526113832961,
+      "cluster_bias": -0.3753595427701359,
+      "bias_removed": 0.3633145956398845
+    },
+    {
+      "p_between": 0.002,
+      "modularity": 0.19376108114768012,
+      "bernoulli_bias": -0.5594332404997276,
+      "cluster_bias": -0.5084012655807687,
+      "bias_removed": 0.09122084857412721
+    },
+    {
+      "p_between": 0.006,
+      "modularity": 0.07412291579508883,
+      "bernoulli_bias": -0.5738290670551095,
+      "cluster_bias": -0.5421942581970698,
+      "bias_removed": 0.055129324522352155
+    }
+  ],
+  "correlation_modularity_vs_bias_removed": 0.9934852177996855,
+  "reading": "modularity is computable from the graph with no experiment and no outcome data, and it tracks how much bias clustering removes (r=0.99 here). That makes it a go/no-go input available before committing to a design, rather than an explanation afterwards."
+}

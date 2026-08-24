@@ -262,6 +262,92 @@ The "robust" choice is the worst one. Resampling whole days discards exactly the
 hour-of-day blocking the design paid for. The analysis has to match the design;
 robustness is neither free nor automatically correct.
 
+## Interference through a social graph — the same lesson, the opposite sign
+
+The marketplace study above finds user-randomisation **overstating** by 7.3x. A
+social product runs the other way: a treated user's feature improves the
+experience of the people they interact with, control users get part of the
+benefit, the arms converge, and the A/B **understates**.
+
+Stochastic block model, 6,000 users in 40 communities, modularity 0.37, ground
+truth +18.0pp:
+
+| design | estimate | bias | RMSE |
+|---|---|---|---|
+| Bernoulli (user-level) | +8.1pp | **-55%** | 0.100 |
+| graph-cluster | +12.6pp | -30% | **0.059** |
+| exposure-weighted | +15.8pp | **-12%** | 0.106 |
+
+49% of a control user's neighbours are treated, which is where the leak comes
+from.
+
+**The understating direction is the more dangerous one.** A 7x effect is
+implausible and someone asks why. An effect that comes in *smaller* than the
+truth looks like an experiment that was appropriately conservative, and nobody
+investigates a disappointing result for being too disappointing — the feature
+gets killed for an effect it does have.
+
+### Unbiasedness is not the goal
+
+The exposure-weighted estimator is the least biased of the three and has the
+**worst RMSE**. It conditions on how much spillover each user actually received —
+comparing control users with no treated neighbours against treated users with all
+treated neighbours — which is nearly the right contrast and uses **2.8% of the
+sample** to compute it. A better point estimate you cannot afford to take is not
+a better estimator, and on a denser graph the pure-control cell empties entirely,
+at which point it returns `nan` rather than an estimate from 5 users.
+
+### Modularity predicts, before the experiment, whether clustering will work
+
+This is the practically useful result, because modularity is computable from the
+graph alone — no experiment, no outcome data:
+
+| p_between | modularity | Bernoulli bias | cluster bias |
+|---|---|---|---|
+| 0.00005 | 0.885 | -56% | **-4%** |
+| 0.0004 | 0.539 | -59% | -30% |
+| 0.0008 | 0.372 | -59% | -38% |
+| 0.002 | 0.194 | -56% | -51% |
+| 0.006 | 0.074 | -57% | -54% |
+
+**r = 0.99** between modularity and the fraction of bias removed. At modularity
+0.07 cluster randomisation buys nothing — it costs the between-community variance
+and removes almost no contamination. At 0.89 it is essentially unbiased. That
+turns *"should we pay for a cluster-randomised test?"* into a number available up
+front rather than an explanation afterwards.
+
+### And it is a trade, not an upgrade
+
+| spillover | Bernoulli bias / RMSE | cluster bias / RMSE | winner |
+|---|---|---|---|
+| 0.00 | -3% / **0.014** | -9% / 0.026 | **Bernoulli** |
+| 0.05 | -40% / 0.054 | -29% / **0.046** | cluster |
+| 0.10 | -56% / 0.102 | -38% / **0.073** | cluster |
+| 0.40 | -84% / 0.403 | -54% / **0.259** | cluster |
+
+With no interference to correct, clustering is **nearly twice as bad**. The
+crossover is at spillover 0.05.
+
+### Three things this got wrong first
+
+* **No between-community heterogeneity.** The first generator gave every
+  community the same baseline, and cluster randomisation came out nearly free at
+  zero spillover. That is not a property of clustering — it is a property of
+  pretending every community is the same. Communities differ for reasons that
+  have nothing to do with the treatment, and that variance is exactly what a
+  cluster design pays for.
+* **A ground truth that was itself a single noisy draw.** At 6,000 users one pair
+  of draws carries a standard error near 0.012, which on a small true effect
+  invents a 20% bias for a design that has none — and it did, reporting +21% bias
+  at zero spillover. Averaged over 24 replications with common random numbers now.
+* **A crossover test with no margin.** Two RMSEs within Monte Carlo error were
+  reported as "cluster wins", placing the crossover at exactly the setting where
+  there is nothing to correct.
+
+Plus one real crash: the exposure calculation indexed past the end of the
+neighbour array when the last users in a graph happen to be isolated. None of the
+three studies hit it; a 1,500-user test graph did on the first run.
+
 ## SRM: the check that runs before the statistics
 
 A sample ratio mismatch does not mean the effect is smaller than reported. It
@@ -377,7 +463,7 @@ different claim.
 
 ```bash
 pip install -r requirements.txt
-make test            # 61 tests
+make test            # 78 tests
 make validate-aa     # 1000 A/A experiments (~3 min)
 make validate-power  # 300 experiments with a known injected effect
 make validate-peek   # 400 experiments, daily peeking vs fixed horizon
@@ -390,10 +476,13 @@ make interference-sweep       # bucket length x burn-in x stratification
 make interference-mechanism   # the falsification: is the bias really displacement
 make interference-regimes     # when interference matters at all
 make interference-coverage    # do the intervals actually cover
+make network          # social-graph interference: the bias runs the other way
+make network-sweep    # when is cluster randomisation worth its variance
+make network-modularity  # modularity predicts clustering's value, before you run it
 ```
 
-`make test` runs 61 tests, of which 13 pin the interference findings and 12 pin
-the SRM gate and the results page.
+`make test` runs 78 tests, of which 30 pin the two interference studies and 12
+pin the SRM gate and the results page.
 
 ## Roadmap (the remaining ~60%)
 
@@ -418,7 +507,8 @@ the SRM gate and the results page.
 | Switchback vs user-randomised, scored against a computable global effect | done |
 | Stratified switchback + the estimand fix (bias 627% -> 0.008%) | done |
 | **Switchback on a real marketplace rather than a simulator** | not possible here |
-| **Interference through a social graph rather than a shared resource** | not started |
+| Social-graph interference: Bernoulli vs cluster vs exposure-weighted | done |
+| Modularity as a pre-experiment predictor of clustering's value (r=0.99) | done |
 
 `test_pre_period_has_no_treatment_effect` asserts the treatment does not leak
 into the pre-period, which is the precondition CUPED depends on — a covariate
@@ -435,6 +525,10 @@ contaminated by the treatment biases the estimate silently.
   a modest persistent per-user component (r = 0.20). That is an honest property
   of the generator, not a limitation of CUPED — the r² relationship is what
   generalises, and it is the number the tests pin.
+* **Both interference studies are simulators.** The marketplace and the social
+  graph are models chosen because their ground truth is computable. What
+  generalises is the method and the fact that the two biases run in *opposite*
+  directions; the 7.3x and the -55% do not.
 * **The marketplace is a simulator, not a marketplace.** The bias figures are
   exact for *this* model of displacement, and the model was chosen because its
   ground truth is computable. What generalises is the method — compute the global

@@ -1,4 +1,4 @@
-.PHONY: test validate-aa validate-power validate-peek validate-cuped validate-seq readout validate-all dashboard interference interference-sweep interference-mechanism interference-regimes interference-coverage
+.PHONY: network network-sweep network-modularity test validate-aa validate-power validate-peek validate-cuped validate-seq readout validate-all dashboard interference interference-sweep interference-mechanism interference-regimes interference-coverage
 test:
 	pytest
 validate-aa:
@@ -25,5 +25,11 @@ interference-mechanism:
 	PYTHONPATH=src python -u -m expkit.interference mechanism --worlds 20
 interference-regimes:
 	PYTHONPATH=src python -u -m expkit.interference regimes --worlds 15
+network:
+	PYTHONPATH=src python -u -m expkit.network_interference compare --worlds 12
+network-sweep:
+	PYTHONPATH=src python -u -m expkit.network_interference sweep --worlds 8
+network-modularity:
+	PYTHONPATH=src python -u -m expkit.network_interference modularity --worlds 6
 interference-coverage:
 	PYTHONPATH=src python -u -m expkit.interference coverage --worlds 150

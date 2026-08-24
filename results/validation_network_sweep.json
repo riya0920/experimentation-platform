@@ -1,0 +1,106 @@
+{
+  "rows": [
+    {
+      "spillover": 0.0,
+      "ground_truth_gte": 0.08044270833333333,
+      "bernoulli": {
+        "n_valid": 8,
+        "mean_estimate": 0.07778924533883666,
+        "sd_of_estimate": 0.014805021765142957,
+        "bias_relative": -0.03298574910607715,
+        "rmse": 0.014100742946604811
+      },
+      "graph_cluster": {
+        "n_valid": 8,
+        "mean_estimate": 0.07331935134211429,
+        "sd_of_estimate": 0.026710323165059238,
+        "bias_relative": -0.08855192892936596,
+        "rmse": 0.025980827699642516
+      },
+      "cluster_wins_on_rmse": false,
+      "tied_within_noise": false
+    },
+    {
+      "spillover": 0.05,
+      "ground_truth_gte": 0.13068055555555555,
+      "bernoulli": {
+        "n_valid": 8,
+        "mean_estimate": 0.07881917462982435,
+        "sd_of_estimate": 0.01563962059127486,
+        "bias_relative": -0.39685614057313706,
+        "rmse": 0.053885302701506155
+      },
+      "graph_cluster": {
+        "n_valid": 8,
+        "mean_estimate": 0.09325334538124289,
+        "sd_of_estimate": 0.028781967956290577,
+        "bias_relative": -0.28640228850574045,
+        "rmse": 0.04610474521065585
+      },
+      "cluster_wins_on_rmse": true,
+      "tied_within_noise": false
+    },
+    {
+      "spillover": 0.1,
+      "ground_truth_gte": 0.1804019097222222,
+      "bernoulli": {
+        "n_valid": 8,
+        "mean_estimate": 0.07941033626585159,
+        "sd_of_estimate": 0.01620772254160193,
+        "bias_relative": -0.5598143257567206,
+        "rmse": 0.10212321917874924
+      },
+      "graph_cluster": {
+        "n_valid": 8,
+        "mean_estimate": 0.11231356794495903,
+        "sd_of_estimate": 0.027274670675603675,
+        "bias_relative": -0.37742583702192334,
+        "rmse": 0.0727113573582711
+      },
+      "cluster_wins_on_rmse": true,
+      "tied_within_noise": false
+    },
+    {
+      "spillover": 0.2,
+      "ground_truth_gte": 0.28017013888888886,
+      "bernoulli": {
+        "n_valid": 8,
+        "mean_estimate": 0.07673004817384094,
+        "sd_of_estimate": 0.014120411196326383,
+        "bias_relative": -0.7261305274068809,
+        "rmse": 0.20386842146579764
+      },
+      "graph_cluster": {
+        "n_valid": 8,
+        "mean_estimate": 0.14698099058050834,
+        "sd_of_estimate": 0.031396851343644325,
+        "bias_relative": -0.4753866662471166,
+        "rmse": 0.1363887503319824
+      },
+      "cluster_wins_on_rmse": true,
+      "tied_within_noise": false
+    },
+    {
+      "spillover": 0.4,
+      "ground_truth_gte": 0.48091319444444447,
+      "bernoulli": {
+        "n_valid": 8,
+        "mean_estimate": 0.07847568452751236,
+        "sd_of_estimate": 0.014941769836136811,
+        "bias_relative": -0.836819439694999,
+        "rmse": 0.4026801445480611
+      },
+      "graph_cluster": {
+        "n_valid": 8,
+        "mean_estimate": 0.22311011209204423,
+        "sd_of_estimate": 0.030754588921764157,
+        "bias_relative": -0.536069888143154,
+        "rmse": 0.25940324480946036
+      },
+      "cluster_wins_on_rmse": true,
+      "tied_within_noise": false
+    }
+  ],
+  "crossover_spillover": 0.05,
+  "reading": "cluster randomisation is not free and is not always right. It removes bias and pays in variance, so with no interference to correct it buys nothing -- it starts winning on RMSE at spillover 0.05."
+}

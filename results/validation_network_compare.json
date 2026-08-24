@@ -1,0 +1,46 @@
+{
+  "config": {
+    "n_users": 6000,
+    "n_communities": 40,
+    "p_within": 0.02,
+    "p_between": 0.0008,
+    "base_rate": 0.3,
+    "direct_effect": 0.08,
+    "spillover": 0.1,
+    "community_sd": 0.06,
+    "seed": 0
+  },
+  "n_worlds": 12,
+  "graph": {
+    "modularity": 0.3723942495463241,
+    "edges": 23209,
+    "mean_degree": 7.7363333333333335
+  },
+  "ground_truth_gte": 0.18031712962962962,
+  "mean_control_exposure_under_bernoulli": 0.4911636122432875,
+  "bernoulli": {
+    "n_valid": 12,
+    "mean_estimate": 0.08136536919677773,
+    "sd_of_estimate": 0.015003408040197109,
+    "bias_relative": -0.5487651707638551,
+    "rmse": 0.09998897251453671
+  },
+  "graph_cluster": {
+    "n_valid": 12,
+    "mean_estimate": 0.12588381494927928,
+    "sd_of_estimate": 0.024580211236091415,
+    "bias_relative": -0.3018754501702421,
+    "rmse": 0.05930281302602782
+  },
+  "exposure_weighted": {
+    "n_valid": 12,
+    "mean_estimate": 0.15833325170103527,
+    "sd_of_estimate": 0.1084777651034554,
+    "bias_relative": -0.12191785646626649,
+    "rmse": 0.10616071597880772,
+    "usable_fraction": 0.028,
+    "n_pure_control": 90,
+    "note": null
+  },
+  "reading": "user-randomised UNDERSTATES the global effect by 55% because 49% of a control user's neighbours are treated and the benefit leaks to them. Cluster randomisation cuts the bias to 30%. Note the SIGN: the marketplace study in interference.py finds the same violation inflating the estimate by 627%. The direction belongs to the mechanism, and a positive-spillover bias is the more dangerous one -- an effect that looks smaller than it is reads as a conservative experiment, and nobody investigates a disappointing result for being too disappointing."
+}
