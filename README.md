@@ -484,7 +484,7 @@ make network-modularity  # modularity predicts clustering's value, before you ru
 `make test` runs 78 tests, of which 30 pin the two interference studies and 12
 pin the SRM gate and the results page.
 
-## Roadmap (the remaining ~60%)
+## Roadmap
 
 | Milestone | Status |
 |---|---|
