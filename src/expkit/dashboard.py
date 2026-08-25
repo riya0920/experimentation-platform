@@ -4,7 +4,7 @@
 
 A real platform serves this from a web app over a warehouse. There is no
 warehouse here, so this renders the same page from the readout objects into a
-single static file — no CDN, no external requests, works from disk.
+single static file - no CDN, no external requests, works from disk.
 
 ## What is on it, and what is deliberately not
 
@@ -216,7 +216,7 @@ def render(readout, sequence=None, ground_truth: dict = None) -> str:
     dclass = {"SHIP": "d-ship", "DO NOT SHIP": "d-no",
               "INCONCLUSIVE": "d-inc", "INVALID": "d-invalid"}.get(readout.decision, "")
 
-    srm_band = ("<div class='band %s'><b>SRM %s</b> &mdash; observed %.3f%% treatment of n=%s, "
+    srm_band = ("<div class='band %s'><b>SRM %s</b> - observed %.3f%% treatment of n=%s, "
                 "chi-square p=%.3g (threshold %.3f). %s</div>"
                 % ("pass" if srm.get("passed", True) else "fail",
                    "pass" if srm.get("passed", True) else "FAIL",
@@ -246,8 +246,8 @@ def render(readout, sequence=None, ground_truth: dict = None) -> str:
                      "with a later crossing.</p></div>" % _sequence_svg(sequence))
 
     return """<!doctype html><meta charset='utf-8'>
-<title>Experiment readout &mdash; %(exp)s</title><style>%(css)s</style>
-<h1>Experiment readout &mdash; %(exp)s</h1>
+<title>Experiment readout - %(exp)s</title><style>%(css)s</style>
+<h1>Experiment readout - %(exp)s</h1>
 <div class='sub'>primary metric: <b>%(primary)s</b> &middot; n=%(n)s per arm &middot; alpha 0.05</div>
 %(srm)s
 <div class='card'>
@@ -284,7 +284,7 @@ def render(readout, sequence=None, ground_truth: dict = None) -> str:
     <h2 style='margin-top:0'>Guardrails</h2>
     <table><tr><th>metric</th><th>rel. effect</th><th>tolerance</th><th>p</th><th>state</th></tr>%(guard)s</table>
     <p class='note'>A guardrail trips on a <i>significant</i> regression beyond an agreed
-    tolerance. "No metric may ever dip" is not a policy &mdash; with enough traffic every metric
+    tolerance. "No metric may ever dip" is not a policy - with enough traffic every metric
     moves, and that rule blocks every ship.</p>
   </div>
   <div class='card'>

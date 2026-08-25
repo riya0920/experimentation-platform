@@ -17,7 +17,7 @@ claim a courier faster does two separable things:
 
 A user-randomised A/B measures (1) + (2). Ship at 100% and only (1) survives,
 because there is no control arm left to steal from. The launch under-delivers and
-nobody can explain why — the experiment "was significant".
+nobody can explain why - the experiment "was significant".
 
 ## What the ground truth is here
 
@@ -321,7 +321,7 @@ def switchback_estimate(world: dict, bucket_len: int = 4, burn_in: int = 0,
 
     est_bucket = float(rate[t_mask].mean() - rate[c_mask].mean())
     est_demand = float(np.average(rate[t_mask], weights=dem[t_mask])
-                       - np.average(rate[c_mask], weights=dem[c_mask]))
+ - np.average(rate[c_mask], weights=dem[c_mask]))
     est = est_demand if weight == "demand" else est_bucket
 
     # Naive iid interval, kept only so the block bootstrap has something to be

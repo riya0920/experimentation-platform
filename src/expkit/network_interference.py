@@ -1,4 +1,4 @@
-"""Interference through a social graph — the same lesson, the opposite sign.
+"""Interference through a social graph - the same lesson, the opposite sign.
 
     python -m expkit.network_interference compare
     python -m expkit.network_interference sweep
@@ -10,8 +10,7 @@ the global effect by 7.3x.
 
 This module studies a social product, where a treated user's new feature makes
 the experience better for the people they interact with. The spillover is
-positive, control users get some of the treatment's benefit, the arms converge —
-and the A/B **understates**. Same violation of SUTVA, opposite direction, and the
+positive, control users get some of the treatment's benefit, the arms converge - and the A/B **understates**. Same violation of SUTVA, opposite direction, and the
 same conclusion as the marketplace case reached from the other side: *the sign of
 interference bias is a property of the mechanism, not of interference.*
 
@@ -31,7 +30,7 @@ neighbours.
 
 **Graph-cluster.** Randomise whole communities, so most of a user's neighbours
 share their assignment. Contamination falls with the fraction of edges that stay
-inside a cluster, which is exactly what graph modularity measures — so
+inside a cluster, which is exactly what graph modularity measures - so
 **modularity predicts how well cluster randomisation will work**, and it is
 computable before the experiment runs. That is the practically useful part: it is
 a go/no-go input rather than a post-hoc explanation.
@@ -39,7 +38,7 @@ a go/no-go input rather than a post-hoc explanation.
 The cost is severe, and it comes from a specific place: the unit of analysis stops
 being 6,000 users and becomes 40 communities, **and communities differ in ways
 users do not**. The generator carries a per-community baseline offset for exactly
-that reason — the first version did not, cluster randomisation came out nearly
+that reason - the first version did not, cluster randomisation came out nearly
 free at zero spillover, and that is not a property of clustering. It is a property
 of pretending every community is the same. `sweep` prices the real trade.
 
@@ -47,7 +46,7 @@ of pretending every community is the same. `sweep` prices the real trade.
 design, condition on how much spillover each user actually received: compare
 control users with *no* treated neighbours against treated users with *all*
 treated neighbours. It needs no new design and it throws away most of the
-sample — and on a well-mixed graph the "no treated neighbours" cell is nearly
+sample - and on a well-mixed graph the "no treated neighbours" cell is nearly
 empty, which is measured below rather than assumed.
 """
 from __future__ import annotations
@@ -387,7 +386,7 @@ def run_sweep(cfg: GraphConfig = None, n_worlds: int = 10) -> dict:
 
 
 def run_modularity(cfg: GraphConfig = None, n_worlds: int = 8) -> dict:
-    """Modularity predicts how well clustering will work — before you run it.
+    """Modularity predicts how well clustering will work - before you run it.
 
     This is the practically useful result. Modularity is computable from the
     graph alone, with no experiment and no outcome data, so it turns "should we

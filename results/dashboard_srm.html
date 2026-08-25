@@ -1,5 +1,5 @@
 <!doctype html><meta charset='utf-8'>
-<title>Experiment readout &mdash; exp_dash</title><style>
+<title>Experiment readout - exp_dash</title><style>
 body{font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:26px;color:#222;background:#fafafa}
 h1{font-size:19px;margin:0 0 2px}h2{font-size:14px;margin:22px 0 8px;color:#444;
 text-transform:uppercase;letter-spacing:.06em}
@@ -22,9 +22,9 @@ tr.bad td{background:#fdf2f1}
 .note{font-size:12px;color:#8a8f98;margin-top:8px}
 footer{margin-top:26px;font-size:11.5px;color:#aaa}
 </style>
-<h1>Experiment readout &mdash; exp_dash</h1>
+<h1>Experiment readout - exp_dash</h1>
 <div class='sub'>primary metric: <b>conversion_rate</b> &middot; n=18,807 per arm &middot; alpha 0.05</div>
-<div class='band fail'><b>SRM FAIL</b> &mdash; observed 48.509% treatment of n=38,770, chi-square p=4.33e-09 (threshold 0.001). The arms are not comparable populations. Nothing below is interpretable.</div>
+<div class='band fail'><b>SRM FAIL</b> - observed 48.509% treatment of n=38,770, chi-square p=4.33e-09 (threshold 0.001). The arms are not comparable populations. Nothing below is interpretable.</div>
 <div class='card'>
   <div class='decision d-invalid'>INVALID</div>
   <ul class='reasons'><li>SAMPLE RATIO MISMATCH: expected 50.0% treatment, observed 48.509% (n=38770, chi2 p=4.33e-09 &lt; 0.001). The arms are not comparable populations, so no metric below is interpretable. Fix the assignment or logging path and rerun; do not analyse around it.</li></ul>
@@ -59,7 +59,7 @@ footer{margin-top:26px;font-size:11.5px;color:#aaa}
     <h2 style='margin-top:0'>Guardrails</h2>
     <table><tr><th>metric</th><th>rel. effect</th><th>tolerance</th><th>p</th><th>state</th></tr><tr class='bad'><td>p50_latency_ms</td><td>+7.49%</td><td>+/-2.0%</td><td>0.0000</td><td>TRIPPED</td></tr><tr class='ok'><td>sessions_per_user</td><td>-0.16%</td><td>+/-5.0%</td><td>0.3675</td><td>within tolerance</td></tr></table>
     <p class='note'>A guardrail trips on a <i>significant</i> regression beyond an agreed
-    tolerance. "No metric may ever dip" is not a policy &mdash; with enough traffic every metric
+    tolerance. "No metric may ever dip" is not a policy - with enough traffic every metric
     moves, and that rule blocks every ship.</p>
   </div>
   <div class='card'>

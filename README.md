@@ -1,21 +1,19 @@
 # Mini Experimentation Platform
 
+![tests](https://img.shields.io/badge/tests-78%20passing-1a7a56) [![demo](https://img.shields.io/badge/demo-live-1d4e7c)](https://riya0920.github.io/experimentation-platform/) ![license](https://img.shields.io/badge/license-MIT-555555)
+
 An A/B testing engine that **validates its own statistics against known truth**.
 1,000 simulated A/A experiments confirm the false-positive rate is what the
 platform claims; injected effects confirm the power calculator is honest; and a
 peeking simulation quantifies exactly how much early stopping inflates error.
 
-> **Status: ~100% of the spec built.** Assignment, the statistics engine, the
-> validation suite, the guardrail-aware readout, **CUPED**, **sequential testing
-> (mSPRT)**, a **metrics layer as code**, a **written experiment review**, an
-> **SRM gate**, a **generated results page**, and **switchback designs for
-> interference** are done and **measured against ground truth**. What remains is
-> named in [Roadmap](#roadmap), and none of it is a statistics gap.
+**[See the experiment readout](https://riya0920.github.io/experimentation-platform/)**
+
 
 ## Sequential testing: the fix for the peeking problem
 
 The peeking demo above shows the disease. mSPRT is the cure, validated the same
-way as everything else — against data whose truth is known.
+way as everything else - against data whose truth is known.
 
 **300 null experiments, checked every day for a week:**
 
@@ -26,7 +24,7 @@ way as everything else — against data whose truth is known.
 
 **Peeking every day is allowed by construction.** The mSPRT likelihood ratio is
 a martingale under the null, so by Ville's inequality the probability of *ever*
-crossing the `1/alpha` boundary — at any sample size, across every look — is at
+crossing the `1/alpha` boundary - at any sample size, across every look - is at
 most alpha.
 
 **What you give up.** The 0.67% is far below the nominal 5%, and that
@@ -49,12 +47,12 @@ documented decision rather than a knob.
 | **measured variance reduction** | **4.27%** |
 | predicted from r² | 4.13% |
 | effective sample multiplier | 1.045x |
-| estimate biased? | no — mean effect unchanged |
+| estimate biased? | no - mean effect unchanged |
 
 **The measurement matches theory to within 0.14 points**, which is the point of
 running it: CUPED's reduction is exactly r², so a covariate correlated 0.20 buys
 4%, not 20%. Teams routinely expect the latter. On this simulated product the
-persistent per-user component is modest, so the win is real but small — an
+persistent per-user component is modest, so the win is real but small - an
 honest 4% rather than a headline number.
 
 Two implementation details that decide whether it works at all, both asserted by
@@ -72,7 +70,7 @@ mode.
 
 ## The headline result: the platform is validated
 
-**A/A validation — 1,000 experiments with a true effect of exactly zero:**
+**A/A validation - 1,000 experiments with a true effect of exactly zero:**
 
 | metric | nominal α | false positives | empirical FPR | 95% CI | contains α? |
 |---|---|---|---|---|---|
@@ -80,8 +78,8 @@ mode.
 | revenue | 0.05 | 58 / 1000 | **5.8%** | [4.51%, 7.42%] | **yes** |
 
 Hitting 5% is necessary but not sufficient, so the suite also checks that the
-p-values are **uniform on [0,1]** under the null — a miscalibrated test can land
-on 5% by luck while being wrong everywhere else. Kolmogorov–Smirnov against
+p-values are **uniform on [0,1]** under the null - a miscalibrated test can land
+on 5% by luck while being wrong everywhere else. Kolmogorov - Smirnov against
 uniform: **D = 0.0279, p = 0.41**, uniformity not rejected.
 
 ```bash
@@ -99,12 +97,12 @@ because it's clearly winning."*
 | fixed horizon, one look | **5.0%** (exactly nominal) |
 | peeking daily for 7 days | **17.0%** (95% CI [13.6%, 21.0%]) |
 
-**A 3.4x inflation**, and the median false stop happens on **day 2** — early,
+**A 3.4x inflation**, and the median false stop happens on **day 2** - early,
 when the estimate is noisiest and looks most exciting. Every additional look is
 another chance to cross the threshold: the fixed-horizon test spends its whole
 alpha budget once, daily checking spends it seven times.
 
-## The power validation caught a real error — mine
+## The power validation caught a real error - mine
 
 Injecting a known +15% lift, the first run reported:
 
@@ -113,7 +111,7 @@ Injecting a known +15% lift, the first run reported:
 
 The calculator was not broken. The **question** was wrong. The generator applies
 its lift to the *per-day* conversion probability, while the analysed metric is
-"converted at least once during the window" — which **saturates**. A +15% daily
+"converted at least once during the window" - which **saturates**. A +15% daily
 lift shows up as only **+9.0%** at the metric level, because users who would
 convert anyway mostly still convert.
 
@@ -129,7 +127,7 @@ Comparing against the lift that actually exists in the analysed metric:
 
 Prediction now lands inside the empirical CI. This is the classic "the effect
 size in the PRD is not the effect size in the metric" trap, and the validation
-suite is what surfaced it — which is the entire argument for having one.
+suite is what surfaced it - which is the entire argument for having one.
 
 ## The metrics layer: defined once, tested, documented
 
@@ -139,8 +137,8 @@ another way in a growth dashboard, the two disagree, someone notices six months
 later, and every historical decision made with either becomes suspect.
 
 `metrics_layer.REGISTRY` is the single source of truth. A metric is a
-**declaration** — unit of analysis, aggregation, direction, guardrail tolerance,
-and a validity range — not a call site:
+**declaration** - unit of analysis, aggregation, direction, guardrail tolerance,
+and a validity range - not a call site:
 
 | metric | type | direction | guardrail |
 |---|---|---|---|
@@ -176,18 +174,18 @@ the readout above: a variant that wins conversion by +3.89% and trips the latenc
 guardrail at +27.6%.
 
 It leads with the decision (**do not ship, fix the latency and re-run**), then
-does the part that is usually skipped — **quantifies the trade rather than
+does the part that is usually skipped - **quantifies the trade rather than
 hiding behind the guardrail**. Answering "is +3.89% conversion worth +30 ms?"
 needs a latency-conversion elasticity *for this product*, which we do not have,
 and the memo says so instead of borrowing a published constant. It proposes the
 one experiment that would settle it, and ends with what the author would have
-designed differently — including that the most interesting number in the test
+designed differently - including that the most interesting number in the test
 (+11.5% revenue) is the one they are least entitled to use, because it was not
 pre-registered.
 
 ## Interference: where the whole platform's core assumption fails
 
-Everything above assumes **SUTVA** — one user's outcome depends only on that
+Everything above assumes **SUTVA** - one user's outcome depends only on that
 user's own assignment. In a marketplace that is false, and the platform will
 report a confident, significant, badly wrong number without any of its other
 checks firing. A/A validation passes. SRM passes. The interval is tight. The
@@ -209,14 +207,14 @@ Three things came out of building this that were not in the plan.
 
 **The direction of the bias is a property of the matching policy, not of
 interference.** Under priority matching the A/B overstates by 7.3x. Re-run with
-proportional rationing — no arm jumps the queue — and the A/B reports *exactly
+proportional rationing - no arm jumps the queue - and the A/B reports *exactly
 zero* against a real +9.6pp effect, because the treated arm's saved supply flows
 back into the shared pool and lifts control by the same amount. "Interference
 inflates your estimate" is the wrong lesson. `make interference-mechanism` runs
 that falsification.
 
 **Blocking beat sample size, and it reversed the recommendation.** The first sweep
-said *longer* buckets were better, which makes no sense — fewer randomisation
+said *longer* buckets were better, which makes no sense - fewer randomisation
 units should be worse. The real driver was hour-of-day imbalance, not unit count.
 Stratifying so each slot-of-day splits evenly between arms cut RMSE **6-14x at
 every bucket length** and moved the answer from 24h buckets to 2-4h.
@@ -248,7 +246,7 @@ control costs control nothing, and a user-randomised test is fine.
 
 ### Inference, and the price of being robust
 
-Every interval here **over**-covers — 100% against a nominal 95%. That is a bug in
+Every interval here **over**-covers - 100% against a nominal 95%. That is a bug in
 the other direction, which is why the coverage check reports interval *width*
 against the estimator's actual spread rather than just the hit rate:
 
@@ -262,7 +260,7 @@ The "robust" choice is the worst one. Resampling whole days discards exactly the
 hour-of-day blocking the design paid for. The analysis has to match the design;
 robustness is neither free nor automatically correct.
 
-## Interference through a social graph — the same lesson, the opposite sign
+## Interference through a social graph - the same lesson, the opposite sign
 
 The marketplace study above finds user-randomisation **overstating** by 7.3x. A
 social product runs the other way: a treated user's feature improves the
@@ -284,15 +282,14 @@ from.
 **The understating direction is the more dangerous one.** A 7x effect is
 implausible and someone asks why. An effect that comes in *smaller* than the
 truth looks like an experiment that was appropriately conservative, and nobody
-investigates a disappointing result for being too disappointing — the feature
+investigates a disappointing result for being too disappointing - the feature
 gets killed for an effect it does have.
 
 ### Unbiasedness is not the goal
 
 The exposure-weighted estimator is the least biased of the three and has the
-**worst RMSE**. It conditions on how much spillover each user actually received —
-comparing control users with no treated neighbours against treated users with all
-treated neighbours — which is nearly the right contrast and uses **2.8% of the
+**worst RMSE**. It conditions on how much spillover each user actually received - comparing control users with no treated neighbours against treated users with all
+treated neighbours - which is nearly the right contrast and uses **2.8% of the
 sample** to compute it. A better point estimate you cannot afford to take is not
 a better estimator, and on a denser graph the pure-control cell empties entirely,
 at which point it returns `nan` rather than an estimate from 5 users.
@@ -300,7 +297,7 @@ at which point it returns `nan` rather than an estimate from 5 users.
 ### Modularity predicts, before the experiment, whether clustering will work
 
 This is the practically useful result, because modularity is computable from the
-graph alone — no experiment, no outcome data:
+graph alone - no experiment, no outcome data:
 
 | p_between | modularity | Bernoulli bias | cluster bias |
 |---|---|---|---|
@@ -311,7 +308,7 @@ graph alone — no experiment, no outcome data:
 | 0.006 | 0.074 | -57% | -54% |
 
 **r = 0.99** between modularity and the fraction of bias removed. At modularity
-0.07 cluster randomisation buys nothing — it costs the between-community variance
+0.07 cluster randomisation buys nothing - it costs the between-community variance
 and removes almost no contamination. At 0.89 it is essentially unbiased. That
 turns *"should we pay for a cluster-randomised test?"* into a number available up
 front rather than an explanation afterwards.
@@ -332,13 +329,13 @@ crossover is at spillover 0.05.
 
 * **No between-community heterogeneity.** The first generator gave every
   community the same baseline, and cluster randomisation came out nearly free at
-  zero spillover. That is not a property of clustering — it is a property of
+  zero spillover. That is not a property of clustering - it is a property of
   pretending every community is the same. Communities differ for reasons that
   have nothing to do with the treatment, and that variance is exactly what a
   cluster design pays for.
 * **A ground truth that was itself a single noisy draw.** At 6,000 users one pair
   of draws carries a standard error near 0.012, which on a small true effect
-  invents a 20% bias for a design that has none — and it did, reporting +21% bias
+  invents a 20% bias for a design that has none - and it did, reporting +21% bias
   at zero spillover. Averaged over 24 replications with common random numbers now.
 * **A crossover test with no margin.** Two RMSEs within Monte Carlo error were
   reported as "cluster wins", placing the crossover at exactly the setting where
@@ -353,9 +350,9 @@ three studies hit it; a 1,500-user test graph did on the first run.
 A sample ratio mismatch does not mean the effect is smaller than reported. It
 means the arms are **not comparable populations**, so the difference of means is
 not estimating a treatment effect at all. The usual causes sit upstream of the
-statistics entirely — a redirect that fails more often for one variant, a bot
+statistics entirely - a redirect that fails more often for one variant, a bot
 filter keying on something the treatment changed, an SDK dropping events under the
-treatment's extra latency — and every one of them also moves the metric, in the
+treatment's extra latency - and every one of them also moves the metric, in the
 same direction as the "win".
 
 So it is a **hard gate**, not a warning. The readout short-circuits to `INVALID`
@@ -375,8 +372,7 @@ The threshold is **0.001, not 0.05**, and the reason is multiplicity rather than
 severity: this check runs on every experiment every day, so at 0.05 the alert
 channel is noise inside a week and everyone learns to ignore it.
 
-Validated against the **actual hash assignment** rather than binomial draws —
-which matters, because assignment is deterministic in `user_id`, so for a fixed
+Validated against the **actual hash assignment** rather than binomial draws - which matters, because assignment is deterministic in `user_id`, so for a fixed
 population and a fixed experiment name the split is not random at all; only the
 salt varies it. Over 1,500 salts at n=40,000: **0 fires** at the 0.001 threshold,
 3.7% at 0.05, median p 0.497. Simulating binomial counts would have tested numpy
@@ -384,16 +380,16 @@ rather than the thing that can actually break.
 
 Sensitivity, measured: a **1.9%** shortfall at n≈39k is caught; **1.5%** is not
 (p=0.13). The check is a floor on how broken assignment can be before anyone
-notices — not a proof that it is fine.
+notices - not a proof that it is fine.
 
 ## The results page
 
-`python -m expkit.dashboard` renders one self-contained HTML file — no CDN, no
+`python -m expkit.dashboard` renders one self-contained HTML file - no CDN, no
 external requests, opens from disk. Panels are ordered the way a reviewer should
 read them, which is not the order they are computed in: **SRM first and alone**,
 then the decision and its reasons in sentences, then the primary metric with its
 interval, then guardrails with their tolerance drawn as a band, then secondaries,
-then the always-valid p-value by day — the only panel it is safe to read early.
+then the always-valid p-value by day - the only panel it is safe to read early.
 
 There is no aggregate health score and no significance traffic light anywhere on
 the page. Both invite the reader to skip the confidence interval, which is the
@@ -425,7 +421,7 @@ per-user understates variance by roughly the average sessions-per-user and
 produces confidently wrong p-values. `user_level()` is where that is enforced.
 
 **Welch's t-test, never Student's.** Equal variance is exactly the assumption
-that fails when a treatment works — changing revenue usually changes its variance
+that fails when a treatment works - changing revenue usually changes its variance
 too. Welch costs nothing when variances happen to match.
 
 **Pooled SE for the p-value, unpooled SE for the interval.** The pooled estimate
@@ -453,7 +449,7 @@ a wall of p-values:
 ```
 
 A guardrail trips only on a **significant** regression **beyond a stated
-tolerance** — "no metric may ever dip" is not a policy, it is a way to block
+tolerance** - "no metric may ever dip" is not a policy, it is a way to block
 every ship. And "not significant" is never reported as "no effect": an
 inconclusive readout states the MDE, because a test powered to detect +10% that
 came back flat has shown the effect is probably under 10%, which is a completely
@@ -484,46 +480,24 @@ make network-modularity  # modularity predicts clustering's value, before you ru
 `make test` runs 78 tests, of which 30 pin the two interference studies and 12
 pin the SRM gate and the results page.
 
-## Roadmap
+## Known limitations
 
-| Milestone | Status |
+Things this repository does not prove, and what each one would need.
+
+| limitation | why |
 |---|---|
-| Hash-based salted assignment + exposure ramp | done |
-| Ground-truth event generator | done |
-| Fixed-horizon analysis (Welch, two-proportion) | done |
-| Power / MDE calculator | done |
-| **A/A validation: 1000 runs, FPR + p-value uniformity** | done |
-| **Power validation against injected effects** | done |
-| **Peeking demo with quantified FPR inflation** | done |
-| Guardrail-aware readout with a ship decision | done |
-| Multiple-comparison control (BH) | done |
-| CUPED + measured variance reduction, validated unbiased | done |
-| Sequential testing (mSPRT), validated under daily peeking | done |
-| Always-valid confidence sequences | done |
-| Metrics layer as code, with validity tests and a catalogue | done |
-| Results page, self-contained, SRM-gated | done |
-| SRM as a hard gate, validated on the real assignment function | done |
-| Written experiment review memo | done |
-| Switchback vs user-randomised, scored against a computable global effect | done |
-| Stratified switchback + the estimand fix (bias 627% -> 0.008%) | done |
 | **Switchback on a real marketplace rather than a simulator** | not possible here |
-| Social-graph interference: Bernoulli vs cluster vs exposure-weighted | done |
-| Modularity as a pre-experiment predictor of clustering's value (r=0.99) | done |
-
-`test_pre_period_has_no_treatment_effect` asserts the treatment does not leak
-into the pre-period, which is the precondition CUPED depends on — a covariate
-contaminated by the treatment biases the estimate silently.
 
 ## Honesty notes
 
-* All data is **simulated**. That is the point — ground truth has to be an input
-  for the validation to mean anything — but no number here describes real users.
+* All data is **simulated**. That is the point - ground truth has to be an input
+  for the validation to mean anything - but no number here describes real users.
 * The validation numbers above are from the committed runs in `results/`, at the
   stated run counts. Re-running with different seeds will move them by roughly
   the CI widths shown.
 * **The CUPED win here is small (4.3%)** because this simulated product has only
   a modest persistent per-user component (r = 0.20). That is an honest property
-  of the generator, not a limitation of CUPED — the r² relationship is what
+  of the generator, not a limitation of CUPED - the r² relationship is what
   generalises, and it is the number the tests pin.
 * **Both interference studies are simulators.** The marketplace and the social
   graph are models chosen because their ground truth is computable. What
@@ -531,8 +505,8 @@ contaminated by the treatment biases the estimate silently.
   directions; the 7.3x and the -55% do not.
 * **The marketplace is a simulator, not a marketplace.** The bias figures are
   exact for *this* model of displacement, and the model was chosen because its
-  ground truth is computable. What generalises is the method — compute the global
-  effect, score designs against it — not the 7.3x.
+  ground truth is computable. What generalises is the method - compute the global
+  effect, score designs against it - not the 7.3x.
 * **Every interference interval over-covers**, by 1.5x to 7.5x. The designs are
   unbiased; the *inference* around them still leaves precision on the table, and
   this repo says so rather than reporting "coverage 1.00" as a pass.

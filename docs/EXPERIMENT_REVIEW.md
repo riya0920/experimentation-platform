@@ -1,4 +1,4 @@
-# Experiment review: EXP-2026-041 — simplified checkout
+# Experiment review: EXP-2026-041 - simplified checkout
 
 **Decision: DO NOT SHIP as-is. Re-run with the latency regression fixed.**
 
@@ -11,8 +11,7 @@ below is reproducible with `make readout`.
 
 ## Recommendation in one paragraph
 
-The variant lifted conversion by **+3.89%** (95% CI +1.65pp to +3.72pp, p < 0.001)
-— a real win, comfortably powered, and the effect is where we expected it. But
+The variant lifted conversion by **+3.89%** (95% CI +1.65pp to +3.72pp, p < 0.001) - a real win, comfortably powered, and the effect is where we expected it. But
 p50 latency rose **+27.6%**, tripping the latency guardrail. The conversion win
 does not license shipping a 27.6% latency regression to 100% of users, and the
 guardrail exists precisely so that decision is not made by whoever is most
@@ -36,7 +35,7 @@ past significance.
 
 The guardrail policy is written down *before* the test: a guardrail trips on a
 **significant** regression **beyond a stated tolerance** (2% for latency). This
-regression is 27.6% — an order of magnitude past tolerance, with a CI nowhere
+regression is 27.6% - an order of magnitude past tolerance, with a CI nowhere
 near zero. There is no reading of the data in which this is noise.
 
 Note what the policy deliberately does *not* say: it does not trip on *any*
@@ -47,7 +46,7 @@ rule rather than a veto.
 ## Quantifying the trade, because "guardrail tripped" is not the whole answer
 
 The PM's question is fair: *is +3.89% conversion worth +30 ms?* Answering it
-requires a number we do not have — the conversion elasticity of latency **on this
+requires a number we do not have - the conversion elasticity of latency **on this
 product**. Published figures exist but are from other products with other users,
 and importing them would be borrowing someone else's constant to justify our
 decision.
@@ -57,7 +56,7 @@ What we can say:
 * the latency regression is **uniform**, not concentrated in a slow tail
   (the CI is tight at [+29.6, +30.1] ms), so it affects every user
 * sessions-per-user did **not** move, so within this window latency has not yet
-  suppressed engagement — but a 7-day window is short for a habit effect
+  suppressed engagement - but a 7-day window is short for a habit effect
 * the revenue win (+11.5%) is larger than the conversion win, which suggests the
   variant also shifts basket composition. **That is not what this test was
   designed to measure**, and treating it as a finding would be reading a
@@ -88,7 +87,7 @@ follow-up if the regression turns out to be expensive to fix.
 | 2 | Profile the checkout path; identify the +30 ms | Checkout eng |
 | 3 | Re-run for **14 days** once latency is within 2% | Analytics |
 | 4 | If the regression is expensive to fix, run the latency-only elasticity test | Analytics |
-| 5 | Do not cite the +11.5% revenue figure externally — secondary, not pre-registered | All |
+| 5 | Do not cite the +11.5% revenue figure externally - secondary, not pre-registered | All |
 
 ## What I would have done differently designing this test
 
@@ -96,6 +95,6 @@ follow-up if the regression turns out to be expensive to fix.
   interesting number in the test and the one we are least entitled to use.
 * **Instrument client-side latency**, not just server-side. The guardrail is a
   proxy for user experience and we measured the half that was easy.
-* **Run 14 days from the start.** The 7-day window saved nothing — the test was
-  well-powered on day 7 — and it costs us the day-of-week and novelty arguments
+* **Run 14 days from the start.** The 7-day window saved nothing - the test was
+  well-powered on day 7 - and it costs us the day-of-week and novelty arguments
   that will now be raised about any re-run.

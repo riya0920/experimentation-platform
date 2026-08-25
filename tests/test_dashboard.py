@@ -1,6 +1,6 @@
 """Tests for the SRM gate and the results page.
 
-A dashboard test that only asserts "the file was written" is worthless — the
+A dashboard test that only asserts "the file was written" is worthless - the
 failure mode of a results page is not a crash, it is rendering a confident number
 that should never have been shown. So the tests here check the *gate*: that a
 broken assignment produces INVALID rather than a big win, and that the page says
